@@ -9,12 +9,12 @@ import com.roynaldi19.dc3_07notesapp.db.DatabaseContract.NoteColumns.Companion._
 import java.sql.SQLException
 
 class NoteHelper(context: Context) {
+
     private var dataBaseHelper: DatabaseHelper = DatabaseHelper(context)
     private lateinit var database: SQLiteDatabase
 
     companion object {
         private const val DATABASE_TABLE = TABLE_NAME
-
         private var INSTANCE: NoteHelper? = null
 
         fun getInstance(context: Context): NoteHelper =
@@ -43,22 +43,13 @@ class NoteHelper(context: Context) {
             null,
             null,
             null,
-            "$_ID ASC"
+            "$_ID ASC",
+            null
         )
     }
 
     fun queryById(id: String): Cursor {
-        return database.query(
-            DATABASE_TABLE,
-            null,
-            "$_ID",
-            arrayOf(id),
-            null,
-            null,
-            null,
-            null
-        )
-
+        return database.query(DATABASE_TABLE, null, "$_ID = ?", arrayOf(id), null, null, null, null)
     }
 
     fun insert(values: ContentValues?): Long {
@@ -66,7 +57,7 @@ class NoteHelper(context: Context) {
     }
 
     fun update(id: String, values: ContentValues?): Int {
-        return database.update(DATABASE_TABLE, values, "$_ID = ?", arrayOf())
+        return database.update(DATABASE_TABLE, values, "$_ID = ?", arrayOf(id))
     }
 
     fun deleteById(id: String): Int {

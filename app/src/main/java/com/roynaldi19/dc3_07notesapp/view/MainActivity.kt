@@ -2,14 +2,21 @@ package com.roynaldi19.dc3_07notesapp.view
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.roynaldi19.dc3_07notesapp.adapter.NoteAdapter
 import com.roynaldi19.dc3_07notesapp.databinding.ActivityMainBinding
+import com.roynaldi19.dc3_07notesapp.db.NoteHelper
 import com.roynaldi19.dc3_07notesapp.entity.Note
+import com.roynaldi19.dc3_07notesapp.helper.MappingHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,20 +29,30 @@ class MainActivity : AppCompatActivity() {
             if (result.data != null) {
                 when (result.resultCode) {
                     NoteAddUpdateActivity.RESULT_ADD -> {
-                        val note = result.data?.getParcelableExtra<Note>(NoteAddUpdateActivity.EXTRA_NOTE) as Note
+                        val note =
+                            result.data?.getParcelableExtra<Note>(NoteAddUpdateActivity.EXTRA_NOTE) as Note
                         adapter.addItem(note)
-                        binding.rvNotes.smoothScrollToPosition(adapter.itemCount -1)
+                        binding.rvNotes.smoothScrollToPosition(adapter.itemCount - 1)
                         showSnackBarMessage("Satu item berhasil ditambahkan")
                     }
+
                     NoteAddUpdateActivity.RESULT_UPDATE -> {
-                        val note = result.data?.getParcelableExtra<Note>(NoteAddUpdateActivity.EXTRA_NOTE) as Note
-                        val position = result?.data?.getIntExtra(NoteAddUpdateActivity.EXTRA_POSITION, 0) as Int
+                        val note =
+                            result.data?.getParcelableExtra<Note>(NoteAddUpdateActivity.EXTRA_NOTE) as Note
+                        val position = result?.data?.getIntExtra(
+                            NoteAddUpdateActivity.EXTRA_POSITION,
+                            0
+                        ) as Int
                         adapter.updateItem(position, note)
                         binding.rvNotes.smoothScrollToPosition(position)
                         showSnackBarMessage("Satu item berhasil diubah")
                     }
+
                     NoteAddUpdateActivity.RESULT_DELETE -> {
-                        val position = result?.data?.getIntExtra(NoteAddUpdateActivity.EXTRA_POSITION, 0) as Int
+                        val position = result?.data?.getIntExtra(
+                            NoteAddUpdateActivity.EXTRA_POSITION,
+                            0
+                        ) as Int
                         adapter.removeItem(position)
                         showSnackBarMessage("Satu item berhasil dihapus")
                     }
@@ -63,13 +80,52 @@ class MainActivity : AppCompatActivity() {
         })
         binding.rvNotes.adapter = adapter
 
-        binding.fabAdd.setOnClickListener{
+        binding.fabAdd.setOnClickListener {
             val intent = Intent(this@MainActivity, NoteAddUpdateActivity::class.java)
             resultLauncher.launch(intent)
         }
+
+        if (savedInstanceState == null) {
+            loadNotesAsync()
+        } else {
+            val list = savedInstanceState.getParcelableArrayList<Note>(EXTRA_STATE)
+            if (list != null) {
+                adapter.listNotes = list
+            }
+        }
     }
 
-    private fun showSnackBarMessage(message: String){
+    private fun showSnackBarMessage(message: String) {
         Snackbar.make(binding.rvNotes, message, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun loadNotesAsync() {
+        lifecycleScope.launch {
+            binding.progressbar.visibility = View.VISIBLE
+            val noteHelper = NoteHelper.getInstance(applicationContext)
+            noteHelper.open()
+            val deferredNotes = async(Dispatchers.IO) {
+                val cursor = noteHelper.queryAll()
+                MappingHelper.mapCursorToArrayList(cursor)
+            }
+            binding.progressbar.visibility = View.INVISIBLE
+            val notes = deferredNotes.await()
+            if (notes.size > 0) {
+                adapter.listNotes = notes
+            } else {
+                adapter.listNotes = ArrayList()
+                showSnackBarMessage("Tidak ada data saat ini")
+            }
+            noteHelper.close()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelableArrayList(EXTRA_STATE, adapter.listNotes)
+    }
+
+    companion object {
+        private const val EXTRA_STATE = "EXTRA_STATE"
     }
 }

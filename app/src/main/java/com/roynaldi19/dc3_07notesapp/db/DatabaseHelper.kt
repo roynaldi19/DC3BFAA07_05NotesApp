@@ -6,12 +6,13 @@ import android.database.sqlite.SQLiteOpenHelper
 import com.roynaldi19.dc3_07notesapp.db.DatabaseContract.NoteColumns.Companion.TABLE_NAME
 
 class DatabaseHelper(context: Context): SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+
     companion object {
         private const val DATABASE_NAME = "dbnoteapp"
 
         private const val DATABASE_VERSION = 1
 
-        private const val SQL_CREATE_TABLE_NOTE = "CREATE TABLE $DATABASE_NAME" +
+        private const val SQL_CREATE_TABLE_NOTE = "CREATE TABLE $TABLE_NAME" +
                 " (${DatabaseContract.NoteColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
                 " ${DatabaseContract.NoteColumns.TITLE} TEXT NOT NULL," +
                 " ${DatabaseContract.NoteColumns.DESCRIPTION} TEXT NOT NULL," +
@@ -25,5 +26,6 @@ class DatabaseHelper(context: Context): SQLiteOpenHelper(context, DATABASE_NAME,
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+        onCreate(db)
     }
 }
